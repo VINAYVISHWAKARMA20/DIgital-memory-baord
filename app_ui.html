@@ -256,8 +256,8 @@
             </div>
             
             <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Memory Content</label>
-            <input type="text" id="n-title" placeholder="Give it a title (Optional)" class="w-full mb-3 px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:border-orange-500 outline-none">
-            <textarea id="n-text" placeholder="Write your thoughts..." class="w-full h-32 mb-6 px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:border-orange-500 outline-none resize-none"></textarea>
+            <input type="text" id="n-title" placeholder="Give it a title (Optional)" class="w-full mb-3 px-5 py-4 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:border-orange-500 outline-none">
+            <textarea id="n-text" placeholder="Write your thoughts..." class="w-full h-32 mb-6 px-5 py-4 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:border-orange-500 outline-none resize-none"></textarea>
             
             <div class="flex gap-2 mb-6">
                 <button onclick="startChecklist()" class="text-[11px] font-black bg-orange-100 text-orange-600 px-5 py-2.5 rounded-full hover:bg-orange-200 transition">📋 + Checklist</button>
@@ -281,6 +281,7 @@
         let currentUser = null; 
         let notes = [];
         let activeColor = 'yellow';
+        let maxZ = 100;
         const pinColors = ['pin-red', 'pin-blue', 'pin-green', 'pin-purple', 'pin-yellow'];
 
         // Firebase Setup
@@ -521,6 +522,12 @@
             if(fileInput.files[0]) note.image_url = URL.createObjectURL(fileInput.files[0]);
 
             notes.push(note);
+            
+            // Clear inputs
+            document.getElementById('n-title').value = '';
+            document.getElementById('n-text').value = '';
+            document.getElementById('n-file').value = '';
+            
             closeModal();
             renderBoard();
             showNotify("✨ Note Sticked! Move it anywhere.");
@@ -585,27 +592,81 @@
 
         function makeDraggable(el) {
             let offset = [0,0];
+            
+            const startDrag = (clientX, clientY) => {
+                maxZ++;
+                el.style.zIndex = maxZ;
+                offset = [el.offsetLeft - clientX, el.offsetTop - clientY];
+            };
+            
+            const moveDrag = (clientX, clientY) => {
+                el.style.left = (clientX + offset[0]) + 'px';
+                el.style.top = (clientY + offset[1]) + 'px';
+            };
+            
+            const endDrag = async () => {
+                // Update local state to prevent jumping on re-render
+                const noteIdx = notes.findIndex(n => n.id === el.id);
+                if (noteIdx !== -1) {
+                    notes[noteIdx].x = parseInt(el.style.left);
+                    notes[noteIdx].y = parseInt(el.style.top);
+                    notes[noteIdx].z = maxZ;
+                }
+                
+                try {
+                    const snap = await firebase.firestore().collection('notes').where('id', '==', el.id).get();
+                    snap.forEach(d => d.ref.update({ 
+                        x: parseInt(el.style.left), 
+                        y: parseInt(el.style.top),
+                        z: maxZ
+                    }));
+                } catch (e) { console.error(e); }
+            };
+
+            // Mouse Events
             el.addEventListener('mousedown', (e) => {
                 if(e.target.tagName === 'BUTTON') return;
-                offset = [el.offsetLeft - e.clientX, el.offsetTop - e.clientY];
-                const onMove = (e) => {
-                    el.style.left = (e.clientX + offset[0]) + 'px';
-                    el.style.top = (e.clientY + offset[1]) + 'px';
-                };
-                const onUp = async () => {
+                startDrag(e.clientX, e.clientY);
+                const onMove = (e) => moveDrag(e.clientX, e.clientY);
+                const onUp = () => {
                     document.removeEventListener('mousemove', onMove);
                     document.removeEventListener('mouseup', onUp);
-                    try {
-                        const snap = await firebase.firestore().collection('notes').where('id', '==', el.id).get();
-                        snap.forEach(d => d.ref.update({ x: parseInt(el.style.left), y: parseInt(el.style.top) }));
-                    } catch(e){}
+                    endDrag();
                 };
                 document.addEventListener('mousemove', onMove);
                 document.addEventListener('mouseup', onUp);
             });
+
+            // Touch Events
+            el.addEventListener('touchstart', (e) => {
+                if(e.target.tagName === 'BUTTON') return;
+                const touch = e.touches[0];
+                startDrag(touch.clientX, touch.clientY);
+                
+                const onTouchMove = (e) => {
+                    // Prevent scrolling while dragging
+                    if (e.cancelable) e.preventDefault();
+                    const touch = e.touches[0];
+                    moveDrag(touch.clientX, touch.clientY);
+                };
+                
+                const onTouchEnd = () => {
+                    document.removeEventListener('touchmove', onTouchMove);
+                    document.removeEventListener('touchend', onTouchEnd);
+                    endDrag();
+                };
+                
+                document.addEventListener('touchmove', onTouchMove, { passive: false });
+                document.addEventListener('touchend', onTouchEnd);
+            }, { passive: false });
         }
 
         function openModal(type) {
+            // Clear inputs when opening modal to avoid cross-note contamination
+            document.getElementById('n-title').value = '';
+            document.getElementById('n-text').value = '';
+            document.getElementById('n-file').value = '';
+            
             document.getElementById('modal').classList.remove('hidden');
             const imgGroup = document.getElementById('image-upload-group');
             const title = document.getElementById('modal-title');
