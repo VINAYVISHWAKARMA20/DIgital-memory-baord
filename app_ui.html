@@ -219,9 +219,13 @@
             </div>
             
             <!-- Quote Box -->
-            <div class="text-center text-[13px] text-gray-600 bg-orange-50/40 p-8 rounded-[32px] border border-orange-100/50 italic leading-relaxed mt-auto shadow-inner">
+            <div class="text-center text-[13px] text-gray-600 bg-orange-50/40 p-8 rounded-[32px] border border-orange-100/50 italic leading-relaxed mt-auto shadow-inner mb-4">
                 "Small progress every day leads to big results."
             </div>
+
+            <button onclick="deleteAllNotes()" class="w-full text-red-400 hover:text-red-600 font-bold text-xs flex items-center justify-center gap-2 transition-colors py-2 opacity-60 hover:opacity-100">
+                <span>🗑️</span> Delete All Memories
+            </button>
         </div>
         
         <!-- Board Area -->
@@ -553,6 +557,30 @@
                 const snap = await firebase.firestore().collection('notes').where('id', '==', id).get();
                 snap.forEach(d => d.ref.delete());
             } catch (e) { console.error(e); }
+        }
+
+        async function deleteAllNotes() {
+            if(!confirm("⚠️ DANGER: Are you sure you want to delete ALL your memories? This cannot be undone!")) return;
+            
+            const btn = event.currentTarget;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="loader"></span> Deleting...';
+            
+            try {
+                const snap = await firebase.firestore().collection('notes').where('username', '==', currentUser).get();
+                const batch = firebase.firestore().batch();
+                snap.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+                
+                notes = [];
+                renderBoard();
+                showNotify("🗑️ Board Cleared Successfully!");
+            } catch (e) {
+                console.error(e);
+                alert("Failed to delete all notes. Please try again.");
+            } finally {
+                btn.innerHTML = originalText;
+            }
         }
 
         function makeDraggable(el) {
