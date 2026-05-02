@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Fridge Board</title>
+    <!-- Use Inter font & Kalam for handwriting -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body, html {
+            height: 100%;
+            font-family: 'Inter', sans-serif;
+            background-color: transparent;
+            overflow: hidden; /* Hide scrollbars for the board */
+        }
+
+        /* Fridge Board Background */
+        #board {
+            width: 100vw;
+            height: 100vh;
+            background-color: #f6f6f6;
+            background-image: radial-gradient(#d1d1d6 1px, transparent 1px);
+            background-size: 24px 24px;
+            position: relative;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.02);
+        }
+
+        /* Sticky Note styles */
+        .sticky-note {
+            position: absolute;
+            width: 220px;
+            min-height: 220px;
+            padding: 24px 20px 20px 20px;
+            box-shadow: 2px 8px 15px rgba(0,0,0,0.08), 0 2px 5px rgba(0,0,0,0.05);
+            cursor: grab;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            user-select: none;
+            /* Allow rotation using CSS variable overridden in inline styles */
+            transform: rotate(var(--rot)); 
+            border-radius: 2px;
+            border-bottom-right-radius: 15px 5px; /* Slight curl effect */
+            font-family: 'Kalam', cursive;
+        }
+        
+        .sticky-note.type-image, .sticky-note.type-mixed {
+            background: white !important;
+            padding: 12px 12px 40px 12px;
+            border-radius: 4px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .sticky-note:active {
+            cursor: grabbing;
+            transform: scale(1.05) rotate(var(--rot));
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+            z-index: 1000 !important;
+        }
+
+        /* The Pin */
+        .pin {
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            box-shadow: inset -2px -2px 4px rgba(0,0,0,0.3), 2px 2px 4px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+        .pin::after {
+            content: '';
+            position: absolute;
+            top: 12px;
+            left: 6px;
+            width: 2px;
+            height: 10px;
+            background: rgba(0,0,0,0.2);
+            z-index: -1;
+            transform: rotate(-15deg);
+        }
+        .pin-red { background: radial-gradient(circle at 30% 30%, #ff4b4b, #d32f2f); }
+        .pin-blue { background: radial-gradient(circle at 30% 30%, #4facfe, #1976d2); }
+        .pin-green { background: radial-gradient(circle at 30% 30%, #81c784, #388e3c); }
+        .pin-purple { background: radial-gradient(circle at 30% 30%, #ba68c8, #7b1fa2); }
+        .pin-yellow { background: radial-gradient(circle at 30% 30%, #ffd54f, #fbc02d); }
+
+        .note-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            margin-top: 4px;
+        }
+
+        .note-date {
+            font-size: 13px;
+            color: rgba(0,0,0,0.6);
+            font-family: 'Inter', sans-serif;
+            margin-top: auto;
+            padding-top: 10px;
+        }
+
+        .note-actions {
+            display: flex;
+            gap: 6px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+
+        .sticky-note:hover .note-actions {
+            opacity: 1;
+        }
+
+        .note-actions button {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            color: rgba(0,0,0,0.5);
+            transition: color 0.2s;
+        }
+        
+        .note-actions button:hover {
+            color: rgba(0,0,0,0.8);
+        }
+
+        .note-content {
+            flex-grow: 1;
+            font-size: 18px; /* Larger for handwriting */
+            line-height: 1.4;
+            color: #2c2c2c;
+            overflow-wrap: break-word;
+        }
+        
+        .note-title {
+            font-weight: 700;
+            font-size: 22px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            padding-bottom: 4px;
+        }
+
+        .note-image {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            pointer-events: none;
+        }
+
+        .type-image .note-content, .type-mixed .note-content {
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        /* Checkbox list style */
+        .check-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        .check-box {
+            width: 14px;
+            height: 14px;
+            border: 2px solid #2c2c2c;
+            border-radius: 2px;
+            display: inline-block;
+        }
+        .check-box.checked {
+            background: #2c2c2c;
+            position: relative;
+        }
+        .check-box.checked::after {
+            content: '✓';
+            position: absolute;
+            color: white;
+            font-size: 10px;
+            top: -1px;
+            left: 2px;
+        }
+
+        /* Pastel Colors Matching the Theme */
+        .color-yellow { background: #ffeb99; }
+        .color-pink { background: #ffc2d4; }
+        .color-cyan { background: #c2e2ff; }
+        .color-green { background: #d3f0c2; }
+        .color-purple { background: #e3c2ff; }
+        
+        /* Firebase specific */
+        #firebase-overlay {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 2000;
+            font-family: 'Inter', sans-serif;
+        }
+        .fb-btn {
+            background: #ff6b00;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(255, 107, 0, 0.3);
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="board">
+        <div id="firebase-overlay">
+            <button id="fb-login-btn" class="fb-btn">Sign in with Google</button>
+            <div id="fb-user-info" style="display:none; background:white; padding: 5px 15px; border-radius:20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); font-size:14px; font-weight:600;"></div>
+        </div>
+        <!-- Notes will be injected here via JS -->
+    </div>
+
+    <!-- Firebase SDK Setup placeholder (Will be populated later) -->
+    <script>
+        // We will add Firebase JS SDK here later.
+        console.log("Firebase is pending setup.");
+    </script>
+
+    <script>
+        // Data injected from Python (Streamlit session state)
+        const INJECTED_NOTES = window.INJECTED_NOTES || [];
+
+        const board = document.getElementById('board');
+        let highestZ = 1;
+        const pinColors = ['pin-red', 'pin-blue', 'pin-green', 'pin-purple', 'pin-yellow'];
+
+        function getRandomPin() {
+            return pinColors[Math.floor(Math.random() * pinColors.length)];
+        }
+
+        function formatChecklist(text) {
+            const lines = text.split('\n');
+            let formatted = '';
+            let hasChecks = false;
+            lines.forEach(line => {
+                if (line.trim().startsWith('- [ ]')) {
+                    hasChecks = true;
+                    formatted += `<div class="check-item"><span class="check-box"></span> <span>${line.replace('- [ ]', '').trim()}</span></div>`;
+                } else if (line.trim().startsWith('- [x]')) {
+                    hasChecks = true;
+                    formatted += `<div class="check-item"><span class="check-box checked"></span> <span>${line.replace('- [x]', '').trim()}</span></div>`;
+                } else if (line.trim().startsWith('- ')) {
+                    formatted += `<div>• ${line.replace('- ', '').trim()}</div>`;
+                } else {
+                    formatted += `<div>${line}</div>`;
+                }
+            });
+            return hasChecks ? formatted : text.replace(/\\n/g, '<br/>');
+        }
+
+        // Render notes
+        function renderNotes(notes) {
+            // keep firebase overlay
+            const fbOverlay = document.getElementById('firebase-overlay');
+            board.innerHTML = '';
+            board.appendChild(fbOverlay);
+            
+            notes.forEach(note => {
+                const el = document.createElement('div');
+                el.className = `sticky-note color-${note.color} type-${note.type}`;
+                el.id = note.id;
+                
+                // Get saved positions from localStorage if available, otherwise use defaults
+                const savedPos = JSON.parse(localStorage.getItem(`note_pos_${note.id}`));
+                const posX = savedPos ? savedPos.x : (note.x || Math.random() * (window.innerWidth - 250));
+                const posY = savedPos ? savedPos.y : (note.y || Math.random() * (window.innerHeight - 250));
+                const rot = note.rotation || (Math.random() * 6 - 3); // -3 to 3 deg
+                
+                el.style.left = `${posX}px`;
+                el.style.top = `${posY}px`;
+                el.style.setProperty('--rot', `${rot}deg`);
+                el.style.zIndex = highestZ++;
+
+                const pinClass = note.pinColor || getRandomPin();
+
+                let innerHTML = `<div class="pin ${pinClass}"></div>`;
+                
+                innerHTML += `<div class="note-actions">
+                                <button title="Change Color">🎨</button>
+                                <button title="Delete">🗑️</button>
+                              </div>`;
+                
+                innerHTML += `<div class="note-content">`;
+                
+                if (note.type === 'image' || note.type === 'mixed') {
+                    if (note.image_url) {
+                        innerHTML += `<img src="${note.image_url}" class="note-image" alt="note image" draggable="false"/>`;
+                    }
+                    if(note.title) {
+                        innerHTML += `<strong>${note.title}</strong><br/>`;
+                    }
+                    if(note.text) {
+                        innerHTML += `<div>${note.text}</div>`;
+                    }
+                } else {
+                    if(note.title) {
+                        innerHTML += `<div class="note-title">${note.title}</div>`;
+                    }
+                    if (note.text) {
+                        innerHTML += `<div>${formatChecklist(note.text)}</div>`;
+                    }
+                }
+                innerHTML += `</div>`;
+                
+                innerHTML += `<div class="note-date">${note.date}</div>`;
+                
+                el.innerHTML = innerHTML;
+                
+                // Drag functionality
+                makeDraggable(el, note.id);
+                board.appendChild(el);
+            });
+        }
+
+        function makeDraggable(el, id) {
+            let isDragging = false;
+            let currentX;
+            let currentY;
+            let initialX;
+            let initialY;
+            let xOffset = 0;
+            let yOffset = 0;
+
+            const rect = el.getBoundingClientRect();
+            xOffset = el.offsetLeft;
+            yOffset = el.offsetTop;
+
+            el.addEventListener("mousedown", dragStart);
+            document.addEventListener("mouseup", dragEnd);
+            document.addEventListener("mousemove", drag);
+
+            function dragStart(e) {
+                if (e.target.tagName === 'BUTTON' || e.target.closest('.note-actions')) return; // Don't drag if clicking buttons
+                
+                initialX = e.clientX - xOffset;
+                initialY = e.clientY - yOffset;
+                
+                el.style.zIndex = highestZ++;
+
+                if (e.target === el || el.contains(e.target)) {
+                    isDragging = true;
+                }
+            }
+
+            function dragEnd(e) {
+                if(isDragging) {
+                    initialX = currentX;
+                    initialY = currentY;
+                    isDragging = false;
+                    
+                    // Save pos to local storage
+                    localStorage.setItem(`note_pos_${id}`, JSON.stringify({
+                        x: currentX,
+                        y: currentY
+                    }));
+                }
+            }
+
+            function drag(e) {
+                if (isDragging) {
+                    e.preventDefault();
+                    currentX = e.clientX - initialX;
+                    currentY = e.clientY - initialY;
+                    xOffset = currentX;
+                    yOffset = currentY;
+
+                    el.style.left = `${currentX}px`;
+                    el.style.top = `${currentY}px`;
+                }
+            }
+        }
+
+        // Initialize with data
+        if(INJECTED_NOTES.length > 0) {
+            renderNotes(INJECTED_NOTES);
+        }
+    </script>
+</body>
+</html>

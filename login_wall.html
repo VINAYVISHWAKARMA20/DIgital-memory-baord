@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f0e6; /* Beige background */
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* Ambient light effect */
+        .ambient-light {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.4) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .hero-text {
+            position: absolute;
+            top: 40px;
+            left: 50px;
+            z-index: 10;
+            width: 300px;
+        }
+        .hero-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #ff6b00;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .hero-subtitle {
+            font-size: 16px;
+            color: #555;
+            line-height: 1.5;
+        }
+
+        /* Container for notes */
+        .notes-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Note Base */
+        .note {
+            position: absolute;
+            padding: 20px;
+            box-shadow: 2px 8px 15px rgba(0,0,0,0.08);
+            font-family: 'Kalam', cursive;
+            font-size: 18px;
+            color: #2c2c2c;
+            border-bottom-right-radius: 15px 5px;
+        }
+
+        .note-image {
+            background: white;
+            padding: 10px 10px 30px 10px;
+            border-radius: 4px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            text-align: center;
+        }
+        .note-image img {
+            width: 150px;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 2px;
+            margin-bottom: 10px;
+        }
+
+        /* The Pin */
+        .pin {
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            box-shadow: inset -2px -2px 4px rgba(0,0,0,0.3), 2px 2px 4px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+        .pin-red { background: radial-gradient(circle at 30% 30%, #ff4b4b, #d32f2f); }
+        .pin-blue { background: radial-gradient(circle at 30% 30%, #4facfe, #1976d2); }
+        .pin-green { background: radial-gradient(circle at 30% 30%, #81c784, #388e3c); }
+        .pin-purple { background: radial-gradient(circle at 30% 30%, #ba68c8, #7b1fa2); }
+        .pin-yellow { background: radial-gradient(circle at 30% 30%, #ffd54f, #fbc02d); }
+
+        /* Checklist */
+        .check-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+        .check-box { width: 14px; height: 14px; border: 2px solid #2c2c2c; border-radius: 2px; }
+        .check-box.checked { background: #2c2c2c; position: relative; }
+        .check-box.checked::after { content: '✓'; position: absolute; color: white; font-size: 10px; top: -1px; left: 2px; }
+
+        /* Specific Notes */
+        .n1 { top: 220px; left: 60px; background: #ffeb99; width: 150px; transform: rotate(-3deg); }
+        .n2 { top: 200px; left: 240px; background: #ffc2d4; width: 160px; transform: rotate(2deg); }
+        .n3 { top: 230px; left: 430px; background: #c2e2ff; width: 150px; transform: rotate(-2deg); }
+        .n4 { top: 400px; left: 50px; background: #e3c2ff; width: 160px; transform: rotate(1deg); }
+        .n5 { top: 380px; left: 230px; transform: rotate(-1deg); } /* Image note */
+        .n6 { top: 420px; left: 420px; background: #d3f0c2; width: 150px; transform: rotate(3deg); }
+        .n7 { top: 580px; left: 120px; transform: rotate(-2deg); } /* Image note */
+        .n8 { top: 600px; left: 320px; background: #ffeb99; width: 140px; transform: rotate(1deg); text-align: center;}
+
+    </style>
+</head>
+<body>
+    <div class="ambient-light"></div>
+    
+    <div class="hero-text">
+        <div class="hero-title">📓 Aaj Kya Kiya</div>
+        <div class="hero-subtitle">Your personal digital fridge board. Stick notes, track your days, and cherish your journey.</div>
+    </div>
+
+    <div class="notes-container">
+        <!-- Note 1 -->
+        <div class="note n1">
+            <div class="pin pin-yellow"></div>
+            Focus on progress, not perfection. ♡
+        </div>
+
+        <!-- Note 2 -->
+        <div class="note n2">
+            <div class="pin pin-red"></div>
+            <div style="font-weight: bold; border-bottom: 1px solid rgba(0,0,0,0.1); margin-bottom: 5px;">Today's Plan</div>
+            <div class="check-item"><span class="check-box checked"></span> College classes</div>
+            <div class="check-item"><span class="check-box checked"></span> Project work</div>
+            <div class="check-item"><span class="check-box"></span> Gym</div>
+            <div class="check-item"><span class="check-box"></span> Read book</div>
+        </div>
+
+        <!-- Note 3 -->
+        <div class="note n3">
+            <div class="pin pin-blue"></div>
+            Every day is a chance to be better. ☆
+        </div>
+
+        <!-- Note 4 -->
+        <div class="note n4">
+            <div class="pin pin-purple"></div>
+            Grateful for small things. Big changes follow. ♡
+        </div>
+
+        <!-- Note 5 (Image) -->
+        <div class="note note-image n5">
+            <div class="pin pin-red"></div>
+            <img src="https://images.unsplash.com/photo-1516585427167-9f4af9627e6c?auto=format&fit=crop&w=400&q=80">
+            Sunset views ♡
+        </div>
+
+        <!-- Note 6 -->
+        <div class="note n6">
+            <div class="pin pin-green"></div>
+            Coding today. Building tomorrow </>
+        </div>
+
+        <!-- Note 7 (Image) -->
+        <div class="note note-image n7">
+            <div class="pin pin-blue"></div>
+            <img src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=400&q=80">
+            Deep work session 🔥
+        </div>
+
+        <!-- Note 8 -->
+        <div class="note n8">
+            <div class="pin pin-yellow"></div>
+            <div style="border-bottom: 1px solid rgba(0,0,0,0.1); margin-bottom: 5px;">Drink water</div>
+            🚰<br/>Stay healthy!
+        </div>
+    </div>
+</body>
+</html>
