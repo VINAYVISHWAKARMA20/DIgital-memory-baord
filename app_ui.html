@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aaj Kya Kiya</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { orange: { 500: '#ff6b00', 600: '#e65c00' }, beige: '#f5f0e6', board: '#f6f6f6' },
+                    fontFamily: { sans: ['Inter', 'sans-serif'], hand: ['Kalam', 'cursive'] }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body, html { height: 100%; overflow: hidden; margin: 0; padding: 0; background-color: #f7f8fa;}
+        .board-bg { background-color: #f6f6f6; background-image: radial-gradient(#d1d1d6 1px, transparent 1px); background-size: 24px 24px; box-shadow: inset 0 0 50px rgba(0,0,0,0.02); border-radius: 20px 0 0 0; }
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+
+        .sticky-note { position: absolute; width: 220px; min-height: 220px; padding: 24px 20px 20px 20px; box-shadow: 2px 8px 15px rgba(0,0,0,0.08), 0 2px 5px rgba(0,0,0,0.05); cursor: grab; display: flex; flex-direction: column; transition: transform 0.2s ease, box-shadow 0.2s ease; user-select: none; transform: rotate(var(--rot)); border-radius: 2px; border-bottom-right-radius: 15px 5px; }
+        .sticky-note:active { cursor: grabbing; z-index: 1000 !important; transform: scale(1.05) rotate(var(--rot)); box-shadow: 0 15px 35px rgba(0,0,0,0.15);}
+        .sticky-note.type-mixed { padding: 12px 12px 40px 12px; border-radius: 4px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+
+        .pin { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 14px; height: 14px; border-radius: 50%; box-shadow: inset -2px -2px 4px rgba(0,0,0,0.3), 2px 2px 4px rgba(0,0,0,0.2); z-index: 10; }
+        .pin::after { content: ''; position: absolute; top: 12px; left: 6px; width: 2px; height: 10px; background: rgba(0,0,0,0.2); z-index: -1; transform: rotate(-15deg); }
+        .pin-red { background: radial-gradient(circle at 30% 30%, #ff4b4b, #d32f2f); }
+        .pin-blue { background: radial-gradient(circle at 30% 30%, #4facfe, #1976d2); }
+        .pin-green { background: radial-gradient(circle at 30% 30%, #81c784, #388e3c); }
+        .pin-purple { background: radial-gradient(circle at 30% 30%, #ba68c8, #7b1fa2); }
+        .pin-yellow { background: radial-gradient(circle at 30% 30%, #ffd54f, #fbc02d); }
+
+        .note-image { width: 100%; height: 160px; object-fit: cover; border-radius: 4px; margin-bottom: 8px; pointer-events: none;}
+        .note-actions { position: absolute; top: 10px; right: 10px; opacity: 0; transition: opacity 0.2s; display: flex; gap: 5px;}
+        .sticky-note:hover .note-actions { opacity: 1; }
+        .note-actions button { background: none; border: none; cursor: pointer; color: rgba(0,0,0,0.5); font-size: 14px;}
+        .note-actions button:hover { color: rgba(0,0,0,0.8); }
+
+        .check-item { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 4px; }
+        .check-box { width: 14px; height: 14px; border: 2px solid #2c2c2c; border-radius: 2px; margin-top: 4px; flex-shrink: 0;}
+        .check-box.checked { background: #2c2c2c; position: relative; }
+        .check-box.checked::after { content: '✓'; position: absolute; color: white; font-size: 10px; top: -1px; left: 2px; }
+
+        .modal-overlay { background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); }
+        .color-yellow { background: #ffeb99; }
+        .color-pink { background: #ffc2d4; }
+        .color-cyan { background: #c2e2ff; }
+        .color-green { background: #d3f0c2; }
+        .color-purple { background: #e3c2ff; }
+        .color-white { background: white; }
+        
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #ff6b00; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="text-gray-800 font-sans antialiased">
+
+    <!-- LOGIN VIEW -->
+    <div id="login-view" class="flex h-screen w-screen">
+        <!-- Left Wall -->
+        <div class="w-1/2 bg-beige relative overflow-hidden flex items-center justify-center border-r border-gray-200">
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.4)_0%,transparent_60%)] pointer-events-none"></div>
+            <div class="absolute top-10 left-12 z-20">
+                <div class="text-3xl font-bold text-orange-500 flex items-center gap-2 mb-4">📓 Aaj Kya Kiya</div>
+                <div class="text-gray-600 text-lg w-80 leading-relaxed">Your personal digital memory board. Stick notes, track your days, and cherish your journey.</div>
+            </div>
+            
+            <div class="relative w-full h-full z-10">
+                <div class="absolute p-5 shadow-[2px_8px_15px_rgba(0,0,0,0.08)] font-hand text-lg text-gray-800 rounded-br-[15px] rounded-bl-[5px] top-[220px] left-[60px] bg-[#ffeb99] w-[150px] -rotate-3"><div class="pin pin-yellow"></div>Focus on progress, not perfection. ♡</div>
+                <div class="absolute p-5 shadow-[2px_8px_15px_rgba(0,0,0,0.08)] font-hand text-lg text-gray-800 rounded-br-[15px] rounded-bl-[5px] top-[200px] left-[240px] bg-[#ffc2d4] w-[160px] rotate-2"><div class="pin pin-red"></div><div class="font-bold border-b border-black/10 mb-2">Today's Plan</div><div class="flex items-center gap-2 mb-1"><div class="check-box checked"></div> College</div><div class="flex items-center gap-2 mb-1"><div class="check-box checked"></div> Project</div><div class="flex items-center gap-2 mb-1"><div class="check-box"></div> Gym</div></div>
+                <div class="absolute p-3 shadow-[0_10px_20px_rgba(0,0,0,0.1)] font-sans text-sm text-center bg-white rounded top-[380px] left-[230px] -rotate-1"><div class="pin pin-red"></div><img src="https://images.unsplash.com/photo-1516585427167-9f4af9627e6c?auto=format&fit=crop&w=400&q=80" class="w-[150px] h-[120px] object-cover rounded-sm mb-2">Sunset views ♡</div>
+            </div>
+        </div>
+        
+        <!-- Right Login Form -->
+        <div class="w-1/2 bg-white flex flex-col justify-center items-center px-12 relative">
+            <div class="w-full max-w-sm">
+                <h2 class="text-3xl font-bold mb-2">Welcome! 👋</h2>
+                <p class="text-gray-500 mb-8">Enter your name to access your personal fridge board.</p>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Your Username</label>
+                        <input type="text" id="login-username" onkeypress="if(event.key === 'Enter') login()" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none text-lg transition" placeholder="e.g. Vinay">
+                    </div>
+                    
+                    <button onclick="login()" class="w-full bg-orange-500 text-white font-bold py-3.5 rounded-xl hover:bg-orange-600 transition shadow-[0_4px_10px_rgba(255,107,0,0.2)] text-lg">Go to my Fridge</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP VIEW -->
+    <div id="main-view" class="hidden flex h-screen w-screen bg-[#f7f8fa]">
+        <!-- Sidebar -->
+        <div class="w-[340px] flex flex-col p-6 z-20">
+            <div class="flex items-center gap-3 mb-8">
+                <div class="w-10 h-10 bg-white rounded-lg shadow-sm border border-gray-100 flex items-center justify-center text-xl">📓</div>
+                <div><h1 class="text-xl font-bold text-orange-500">Aaj Kya Kiya</h1><div class="text-xs text-gray-500">A digital memory board</div></div>
+            </div>
+            
+            <div class="flex items-center gap-3 p-3 border border-gray-100 rounded-xl mb-6 bg-white shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+                <div id="user-initials" class="w-10 h-10 rounded-full bg-orange-400 text-white flex items-center justify-center font-bold text-sm">--</div>
+                <div class="flex-1">
+                    <div id="user-name" class="font-bold text-gray-800 text-sm">User</div>
+                    <div class="text-xs text-gray-500 font-medium">Personal Board</div>
+                </div>
+                <button onclick="logout()" class="text-xs text-gray-400 hover:text-orange-500" title="Logout">🚪</button>
+            </div>
+            
+            <div class="mb-6">
+                <div class="flex justify-between items-center mb-4"><div class="text-sm font-bold" id="current-month-year">May 21, 2025</div><div class="text-gray-400">📅</div></div>
+                <div class="flex justify-between text-[11px] text-gray-400 font-bold mb-2"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+                <div class="flex justify-between text-xs font-semibold text-gray-700" id="calendar-days"></div>
+            </div>
+            
+            <div class="relative mb-6">
+                <input type="text" placeholder="Search your notes..." class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-orange-500 shadow-sm bg-white">
+                <span class="absolute left-3 top-2.5 text-gray-400">🔍</span>
+            </div>
+            
+            <button onclick="openModal()" class="w-full bg-orange-500 text-white font-bold py-2.5 rounded-xl mb-8 hover:bg-orange-600 transition shadow-[0_4px_10px_rgba(255,107,0,0.2)]">+ Create Note</button>
+            
+            <div class="space-y-3 mt-auto mb-6">
+                <div class="flex justify-between items-center p-3.5 bg-white rounded-xl shadow-sm border border-gray-50"><span class="text-sm text-gray-600 flex items-center gap-2 font-medium">🗂️ Total Notes</span><span id="stat-total" class="font-bold">0</span></div>
+                <div class="flex justify-between items-center p-3.5 bg-white rounded-xl shadow-sm border border-gray-50"><span class="text-sm text-gray-600 flex items-center gap-2 font-medium">📅 Today's Notes</span><span id="stat-today" class="font-bold">0</span></div>
+            </div>
+            
+            <div class="text-center text-xs text-gray-500 mb-4 bg-orange-50/50 p-4 rounded-xl border border-orange-100/50 italic leading-relaxed">
+                "Small progress every day leads to big results."
+            </div>
+        </div>
+        
+        <!-- Board Area -->
+        <div class="flex-1 board-bg relative overflow-hidden" id="board">
+            <div class="absolute top-6 left-6 flex gap-2 z-20 bg-white p-1 rounded-full shadow-sm border border-gray-100">
+                <button class="bg-orange-50 text-orange-600 px-4 py-1.5 rounded-full text-sm font-semibold flex items-center gap-2">🔲 All Notes</button>
+            </div>
+            
+            <div id="auth-alert" class="hidden absolute bottom-6 left-1/2 -translate-x-1/2 z-30 bg-[#fffbed] border border-[#fce49c] text-[#a17a0d] px-6 py-3 rounded-full text-sm font-medium shadow-md flex items-center gap-3">
+                ⚠️ Firebase not configured. Saving notes locally to your browser.
+            </div>
+            
+            <div id="notes-container" class="absolute inset-0"></div>
+            
+            <button onclick="openModal()" class="absolute bottom-10 right-10 w-14 h-14 bg-orange-500 text-white rounded-full flex justify-center items-center text-3xl shadow-[0_4px_15px_rgba(255,107,0,0.4)] hover:scale-110 transition z-20">+</button>
+        </div>
+    </div>
+
+    <!-- Unified Note Modal -->
+    <div id="modal-note" class="hidden fixed inset-0 z-50 flex justify-center items-center modal-overlay">
+        <div class="bg-white p-6 rounded-xl w-[420px] shadow-2xl relative border border-gray-100">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-800 text-lg">✕</button>
+            <h3 class="text-xl font-bold mb-4 text-gray-800">Create Note</h3>
+            
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Image (Optional)</label>
+            <input type="file" id="n-file" accept="image/*" class="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-600 hover:file:bg-orange-100 mb-4 cursor-pointer">
+            
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Content</label>
+            <input type="text" id="n-title" placeholder="Title (Optional)" class="w-full mb-2 px-3 py-2 border border-gray-200 rounded-lg focus:border-orange-500 outline-none">
+            <textarea id="n-text" placeholder="Write your thoughts... Use '- [ ]' for checklist items." class="w-full h-28 mb-4 px-3 py-2 border border-gray-200 rounded-lg focus:border-orange-500 outline-none resize-none"></textarea>
+            
+            <div class="flex gap-2 mb-6" id="color-picker-group">
+                <button onclick="selectColor('yellow')" class="w-8 h-8 rounded-full bg-[#ffeb99] border-2 border-transparent ring-2 ring-offset-2 ring-gray-800" id="cc-yellow"></button>
+                <button onclick="selectColor('pink')" class="w-8 h-8 rounded-full bg-[#ffc2d4] border-2 border-transparent" id="cc-pink"></button>
+                <button onclick="selectColor('cyan')" class="w-8 h-8 rounded-full bg-[#c2e2ff] border-2 border-transparent" id="cc-cyan"></button>
+                <button onclick="selectColor('green')" class="w-8 h-8 rounded-full bg-[#d3f0c2] border-2 border-transparent" id="cc-green"></button>
+                <button onclick="selectColor('purple')" class="w-8 h-8 rounded-full bg-[#e3c2ff] border-2 border-transparent" id="cc-purple"></button>
+                <button onclick="selectColor('white')" class="w-8 h-8 rounded-full bg-white border-2 border-gray-200" id="cc-white" title="Polaroid Style (Best for Images)"></button>
+            </div>
+            
+            <button onclick="saveNote()" id="btn-save" class="w-full bg-orange-500 text-white font-bold py-2.5 rounded-lg hover:bg-orange-600 transition flex justify-center items-center">
+                <span>Stick to Board</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let isDevMode = true;
+        let currentUser = null; // Will store the entered username
+        let notes = [];
+        let highestZ = 10;
+        let activeColor = 'yellow';
+        const pinColors = ['pin-red', 'pin-blue', 'pin-green', 'pin-purple', 'pin-yellow'];
+
+        // Init Calendar
+        const today = new Date();
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        document.getElementById('current-month-year').innerText = `${monthNames[today.getMonth()]} ${today.getDate()}, ${today.getFullYear()}`;
+        
+        let daysHtml = '';
+        for(let i=0; i<7; i++) {
+            let d = new Date(today);
+            d.setDate(today.getDate() - today.getDay() + i);
+            if (d.toDateString() === today.toDateString()) daysHtml += `<span class="w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center">${d.getDate()}</span>`;
+            else daysHtml += `<span class="w-6 h-6 flex items-center justify-center">${d.getDate()}</span>`;
+        }
+        document.getElementById('calendar-days').innerHTML = daysHtml;
+
+        // Firebase Init
+        const env = window.ENV || {};
+        if (env.FIREBASE_CONFIG && env.FIREBASE_CONFIG.apiKey) {
+            isDevMode = false;
+            firebase.initializeApp(env.FIREBASE_CONFIG);
+        } else {
+            document.getElementById('auth-alert').classList.remove('hidden');
+        }
+
+        // Auto-login check
+        const savedUser = localStorage.getItem('aaj_kya_kiya_user');
+        if(savedUser) {
+            document.getElementById('login-username').value = savedUser;
+            login();
+        }
+
+        function login() {
+            const usernameInput = document.getElementById('login-username').value.trim();
+            if(!usernameInput) return alert("Please enter a username to continue.");
+            
+            currentUser = usernameInput;
+            localStorage.setItem('aaj_kya_kiya_user', currentUser);
+            
+            // Update UI
+            document.getElementById('user-name').innerText = currentUser;
+            document.getElementById('user-initials').innerText = currentUser.substring(0,2).toUpperCase();
+            
+            // Route
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('main-view').classList.remove('hidden');
+            
+            fetchNotes();
+        }
+
+        function logout() {
+            localStorage.removeItem('aaj_kya_kiya_user');
+            window.location.reload();
+        }
+
+        async function fetchNotes() {
+            notes = [];
+            if (isDevMode) {
+                notes = JSON.parse(localStorage.getItem(`dev_notes_${currentUser}`)) || [];
+            } else {
+                const snapshot = await firebase.firestore().collection('notes').where('username', '==', currentUser).get();
+                snapshot.forEach(doc => notes.push({ id: doc.id, ...doc.data() }));
+            }
+            renderBoard();
+        }
+
+        function openModal() {
+            document.getElementById('modal-note').classList.remove('hidden');
+            selectColor('yellow');
+        }
+        function closeModal() { document.getElementById('modal-note').classList.add('hidden'); }
+        
+        function selectColor(color) {
+            activeColor = color;
+            const colors = ['yellow', 'pink', 'cyan', 'green', 'purple', 'white'];
+            colors.forEach(c => {
+                const el = document.getElementById(`cc-${c}`);
+                if(el) {
+                    if(c === color) el.classList.add('ring-2', 'ring-offset-2', 'ring-gray-800');
+                    else el.classList.remove('ring-2', 'ring-offset-2', 'ring-gray-800');
+                }
+            });
+        }
+
+        // Helper function to compress images directly to Base64 to make it lightning fast (instant)
+        function compressImageToBase64(file, maxWidth, maxHeight, quality) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        let width = img.width; let height = img.height;
+                        if (width > height) { if (width > maxWidth) { height = Math.round((height *= maxWidth / width)); width = maxWidth; } } 
+                        else { if (height > maxHeight) { width = Math.round((width *= maxHeight / height)); height = maxHeight; } }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width; canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        // Resolve immediately as a Base64 string to bypass slow network uploads
+                        resolve(canvas.toDataURL('image/jpeg', quality));
+                    };
+                };
+            });
+        }
+
+        async function saveNote() {
+            try {
+                const btn = document.getElementById('btn-save');
+                const fileInput = document.getElementById('n-file');
+                
+                const generateId = () => { return typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random().toString(36).substring(2); };
+                
+                let note = {
+                    id: generateId(),
+                    title: document.getElementById('n-title').value.trim(),
+                    text: document.getElementById('n-text').value.trim(),
+                    date: new Date().toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'}),
+                    color: activeColor,
+                    x: Math.random() * 400 + 100,
+                    y: Math.random() * 300 + 100,
+                    rot: Math.random() * 6 - 3,
+                    username: currentUser
+                };
+
+                if(!note.text && fileInput.files.length === 0 && !note.title) return alert("Note cannot be empty.");
+
+                let rawFile = null;
+                if (fileInput.files.length > 0) {
+                    rawFile = fileInput.files[0];
+                    // Create a temporary instant local URL so the user sees it immediately without waiting
+                    note.image_url = URL.createObjectURL(rawFile);
+                    note.type = 'mixed';
+                } else {
+                    note.type = 'text';
+                }
+            
+                // ZERO-LATENCY OPTIMISTIC UI: Render instantly and close modal
+                notes.push(note);
+                
+                document.getElementById('n-title').value = '';
+                document.getElementById('n-text').value = '';
+                fileInput.value = '';
+                
+                closeModal();
+                renderBoard();
+
+                // BACKGROUND PROCESSING: Compress and upload invisibly
+                if (rawFile) {
+                    try {
+                        const base64Image = await compressImageToBase64(rawFile, 400, 400, 0.6);
+                        note.image_url = base64Image; // Swap temp URL with permanent Base64
+                    } catch (e) {
+                        console.error("Image processing failed: " + e.message);
+                    }
+                }
+
+                if (isDevMode) {
+                    localStorage.setItem(`dev_notes_${currentUser}`, JSON.stringify(notes));
+                } else {
+                    firebase.firestore().collection('notes').doc(note.id).set(note).catch(err => console.error(err));
+                }
+                
+            } catch (err) {
+                console.error("Save Note Error:", err);
+                alert("An error occurred while saving the note: " + err.message);
+                document.getElementById('btn-save').innerHTML = 'Stick to Board';
+            }
+        }
+
+        async function deleteNote(id) {
+            notes = notes.filter(n => n.id !== id);
+            renderBoard();
+            if (isDevMode) {
+                localStorage.setItem(`dev_notes_${currentUser}`, JSON.stringify(notes));
+            } else {
+                await firebase.firestore().collection('notes').doc(id).delete();
+            }
+        }
+
+        function formatChecklist(text) {
+            if(!text) return "";
+            const lines = text.split('\n');
+            let formatted = '';
+            lines.forEach(line => {
+                if (line.trim().startsWith('- [ ]')) formatted += `<div class="check-item"><div class="check-box"></div> <span>${line.replace('- [ ]', '').trim()}</span></div>`;
+                else if (line.trim().startsWith('- [x]')) formatted += `<div class="check-item"><div class="check-box checked"></div> <span>${line.replace('- [x]', '').trim()}</span></div>`;
+                else if (line.trim().startsWith('• ')) formatted += `<div class="mb-1">• ${line.replace('• ', '').trim()}</div>`;
+                else formatted += `<div>${line}</div>`;
+            });
+            return formatted;
+        }
+
+        function renderBoard() {
+            const container = document.getElementById('notes-container');
+            container.innerHTML = '';
+            document.getElementById('stat-total').innerText = notes.length;
+            const todayStr = new Date().toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
+            document.getElementById('stat-today').innerText = notes.filter(n => n.date === todayStr).length;
+
+            notes.forEach(note => {
+                const el = document.createElement('div');
+                el.className = `sticky-note color-${note.color} ${note.type === 'mixed' ? 'type-mixed' : 'type-text'}`;
+                el.id = note.id;
+                
+                const pinClass = note.pinColor || pinColors[Math.abs(hashCode(note.id)) % pinColors.length];
+                el.style.left = `${note.x}px`; el.style.top = `${note.y}px`; el.style.setProperty('--rot', `${note.rot || 0}deg`); el.style.zIndex = highestZ++;
+
+                let html = `<div class="pin ${pinClass}"></div><div class="note-actions"><button onclick="deleteNote('${note.id}')">🗑️</button></div>`;
+                
+                html += `<div class="flex-grow flex flex-col ${note.type === 'mixed' ? 'font-sans' : 'font-hand text-[19px] text-gray-800'}">`;
+                
+                if (note.image_url) {
+                    html += `<img src="${note.image_url}" class="note-image" draggable="false"/>`;
+                    if(note.title) html += `<strong class="text-[16px] font-bold mt-1 leading-tight">${note.title}</strong>`;
+                    if(note.text) html += `<div class="text-sm mt-1 leading-snug">${formatChecklist(note.text)}</div>`;
+                } else {
+                    if(note.title) html += `<div class="font-bold text-[22px] mb-2 border-b border-black/5 pb-1">${note.title}</div>`;
+                    if (note.text) html += `<div class="leading-snug">${formatChecklist(note.text)}</div>`;
+                }
+                html += `</div><div class="text-[12px] text-black/50 font-sans mt-auto pt-3">${note.date}</div>`;
+                
+                el.innerHTML = html;
+                makeDraggable(el, note);
+                container.appendChild(el);
+            });
+        }
+
+        function hashCode(str) { let hash = 0; for(let i=0; i<str.length; i++) hash = str.charCodeAt(i) + ((hash<<5)-hash); return hash; }
+
+        function makeDraggable(el, note) {
+            let isDragging = false, currentX, currentY, initialX, initialY, xOffset = el.offsetLeft, yOffset = el.offsetTop;
+            el.addEventListener("mousedown", dragStart); document.addEventListener("mouseup", dragEnd); document.addEventListener("mousemove", drag);
+            function dragStart(e) { if(e.target.tagName==='BUTTON' || e.target.closest('.note-actions')) return; initialX = e.clientX - xOffset; initialY = e.clientY - yOffset; el.style.zIndex = highestZ++; if(e.target===el || el.contains(e.target)) isDragging = true; }
+            function dragEnd() { 
+                if(isDragging) { 
+                    initialX = currentX; initialY = currentY; isDragging = false; 
+                    note.x = currentX; note.y = currentY; 
+                    if(isDevMode) {
+                        localStorage.setItem(`dev_notes_${currentUser}`, JSON.stringify(notes));
+                    } else {
+                        firebase.firestore().collection('notes').doc(note.id).update({x: currentX, y: currentY}); 
+                    }
+                } 
+            }
+            function drag(e) { if(isDragging) { e.preventDefault(); currentX = e.clientX - initialX; currentY = e.clientY - initialY; xOffset = currentX; yOffset = currentY; el.style.left = `${currentX}px`; el.style.top = `${currentY}px`; } }
+        }
+    </script>
+</body>
+</html>
