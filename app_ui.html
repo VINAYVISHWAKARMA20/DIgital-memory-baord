@@ -123,21 +123,6 @@
                         </div>
                     </div>
                     <button onclick="checkUser()" id="btn-check-user" class="w-full bg-orange-500 text-white font-extrabold py-4 rounded-2xl hover:bg-orange-600 transition-all shadow-xl shadow-orange-100 text-lg">Continue</button>
-                    
-                    <div class="relative flex items-center gap-4 py-4">
-                        <div class="flex-grow border-t border-gray-100"></div>
-                        <span class="text-xs text-gray-300 font-bold uppercase tracking-widest">or continue with</span>
-                        <div class="flex-grow border-t border-gray-100"></div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <button class="flex items-center justify-center gap-2 py-3.5 border-2 border-gray-100 rounded-2xl hover:border-orange-500 transition-all font-bold text-gray-600 text-sm">
-                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" class="w-5 h-5"> Google
-                        </button>
-                        <button class="flex items-center justify-center gap-2 py-3.5 border-2 border-gray-100 rounded-2xl hover:border-gray-800 transition-all font-bold text-gray-600 text-sm">
-                            <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" class="w-5 h-5 opacity-70"> GitHub
-                        </button>
-                    </div>
                 </div>
 
                 <!-- Step 2: PIN -->
@@ -503,7 +488,7 @@
                         }
                     });
                 }
-                html += `</div><div class="mt-4 text-[9px] font-black uppercase text-gray-400 tracking-widest text-right opacity-60 italic">${note.date}</div>`;
+                html += `</div><div class="mt-4 text-[10px] font-bold uppercase text-orange-600/70 tracking-widest text-right italic border-t border-black/5 pt-2">${note.date}</div>`;
                 el.innerHTML = html;
                 container.appendChild(el);
                 makeDraggable(el);
