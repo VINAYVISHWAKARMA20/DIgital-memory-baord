@@ -230,10 +230,10 @@
         });
 
         function login(isSilent = false) {
-            const usernameInput = document.getElementById('login-username').value.trim().toLowerCase();
+            const usernameInput = document.getElementById('login-username').value.trim();
             if(!usernameInput) return alert("Please enter a username to continue.");
             
-            currentUser = usernameInput;
+            currentUser = usernameInput; // Removed .toLowerCase() to maintain original case
             localStorage.setItem('aaj_kya_kiya_user', currentUser);
             
             // Update UI
@@ -363,25 +363,27 @@
                 if (rawFile) {
                     try {
                         const base64Image = await compressImageToBase64(rawFile, 500, 500, 0.6);
-                        note.image_url = base64Image; // Update with permanent data
+                        note.image_url = base64Image;
                         
-                        // Sync the update to the database now that we have the real image
                         if (!isDevMode) {
                             await firebase.firestore().collection('notes').doc(note.id).set(note);
+                            console.log("Note saved to Firebase");
                         } else {
                             localStorage.setItem(`dev_notes_${currentUser}`, JSON.stringify(notes));
                         }
-                        // Re-render to swap the blob URL with the permanent base64 (optional but cleaner)
                         renderBoard();
                     } catch (e) {
-                        console.error("Image processing failed: " + e.message);
+                        console.error("Firebase save failed:", e);
+                        alert("Database error: Please check your Firebase rules or connection.");
                     }
                 } else {
-                    // Pure text note - save immediately
                     if (isDevMode) {
                         localStorage.setItem(`dev_notes_${currentUser}`, JSON.stringify(notes));
                     } else {
-                        firebase.firestore().collection('notes').doc(note.id).set(note).catch(err => console.error(err));
+                        firebase.firestore().collection('notes').doc(note.id).set(note).catch(err => {
+                            console.error("Firebase save failed:", err);
+                            alert("Database error: Could not save note.");
+                        });
                     }
                 }
                 
