@@ -221,14 +221,16 @@
         }
 
         // Auto-login check
-        const savedUser = localStorage.getItem('aaj_kya_kiya_user');
-        if(savedUser) {
-            document.getElementById('login-username').value = savedUser;
-            login();
-        }
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedUser = localStorage.getItem('aaj_kya_kiya_user');
+            if(savedUser) {
+                document.getElementById('login-username').value = savedUser;
+                login(true); // silent login
+            }
+        });
 
-        function login() {
-            const usernameInput = document.getElementById('login-username').value.trim();
+        function login(isSilent = false) {
+            const usernameInput = document.getElementById('login-username').value.trim().toLowerCase();
             if(!usernameInput) return alert("Please enter a username to continue.");
             
             currentUser = usernameInput;
@@ -251,14 +253,28 @@
         }
 
         async function fetchNotes() {
-            notes = [];
-            if (isDevMode) {
-                notes = JSON.parse(localStorage.getItem(`dev_notes_${currentUser}`)) || [];
-            } else {
-                const snapshot = await firebase.firestore().collection('notes').where('username', '==', currentUser).get();
-                snapshot.forEach(doc => notes.push({ id: doc.id, ...doc.data() }));
+            const board = document.getElementById('notes-container');
+            board.innerHTML = '<div class="flex items-center justify-center h-full text-gray-400 gap-3"><span class="loader"></span> Fetching your memories...</div>';
+            
+            try {
+                notes = [];
+                if (isDevMode) {
+                    notes = JSON.parse(localStorage.getItem(`dev_notes_${currentUser}`)) || [];
+                } else {
+                    // Force a fresh fetch from Firestore
+                    const snapshot = await firebase.firestore().collection('notes')
+                        .where('username', '==', currentUser)
+                        .get();
+                    
+                    snapshot.forEach(doc => {
+                        notes.push({ id: doc.id, ...doc.data() });
+                    });
+                }
+                renderBoard();
+            } catch (e) {
+                console.error("Fetch failed", e);
+                board.innerHTML = '<div class="text-center p-10 text-red-400">Failed to load notes. Please check your connection.</div>';
             }
-            renderBoard();
         }
 
         function openModal() {
@@ -343,20 +359,30 @@
                 closeModal();
                 renderBoard();
 
-                // BACKGROUND PROCESSING: Compress and upload invisibly
+                // BACKGROUND PROCESSING: Compress and upload permanently
                 if (rawFile) {
                     try {
-                        const base64Image = await compressImageToBase64(rawFile, 400, 400, 0.6);
-                        note.image_url = base64Image; // Swap temp URL with permanent Base64
+                        const base64Image = await compressImageToBase64(rawFile, 500, 500, 0.6);
+                        note.image_url = base64Image; // Update with permanent data
+                        
+                        // Sync the update to the database now that we have the real image
+                        if (!isDevMode) {
+                            await firebase.firestore().collection('notes').doc(note.id).set(note);
+                        } else {
+                            localStorage.setItem(`dev_notes_${currentUser}`, JSON.stringify(notes));
+                        }
+                        // Re-render to swap the blob URL with the permanent base64 (optional but cleaner)
+                        renderBoard();
                     } catch (e) {
                         console.error("Image processing failed: " + e.message);
                     }
-                }
-
-                if (isDevMode) {
-                    localStorage.setItem(`dev_notes_${currentUser}`, JSON.stringify(notes));
                 } else {
-                    firebase.firestore().collection('notes').doc(note.id).set(note).catch(err => console.error(err));
+                    // Pure text note - save immediately
+                    if (isDevMode) {
+                        localStorage.setItem(`dev_notes_${currentUser}`, JSON.stringify(notes));
+                    } else {
+                        firebase.firestore().collection('notes').doc(note.id).set(note).catch(err => console.error(err));
+                    }
                 }
                 
             } catch (err) {
