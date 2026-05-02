@@ -331,8 +331,8 @@
                     text: document.getElementById('n-text').value.trim(),
                     date: new Date().toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'}),
                     color: activeColor,
-                    x: Math.random() * 400 + 100,
-                    y: Math.random() * 300 + 100,
+                    x: 50 + Math.random() * 100,
+                    y: 50 + Math.random() * 100,
                     rot: Math.random() * 6 - 3,
                     username: currentUser
                 };
@@ -453,21 +453,45 @@
         function hashCode(str) { let hash = 0; for(let i=0; i<str.length; i++) hash = str.charCodeAt(i) + ((hash<<5)-hash); return hash; }
 
         function makeDraggable(el, note) {
-            let isDragging = false, currentX, currentY, initialX, initialY, xOffset = el.offsetLeft, yOffset = el.offsetTop;
-            el.addEventListener("mousedown", dragStart); document.addEventListener("mouseup", dragEnd); document.addEventListener("mousemove", drag);
-            function dragStart(e) { if(e.target.tagName==='BUTTON' || e.target.closest('.note-actions')) return; initialX = e.clientX - xOffset; initialY = e.clientY - yOffset; el.style.zIndex = highestZ++; if(e.target===el || el.contains(e.target)) isDragging = true; }
+            let isDragging = false, currentX, currentY, initialX, initialY, xOffset, yOffset;
+            
+            el.addEventListener("mousedown", dragStart);
+            document.addEventListener("mouseup", dragEnd);
+            document.addEventListener("mousemove", drag);
+            
+            function dragStart(e) { 
+                if(e.target.tagName==='BUTTON' || e.target.closest('.note-actions')) return;
+                xOffset = el.offsetLeft;
+                yOffset = el.offsetTop;
+                initialX = e.clientX - xOffset; 
+                initialY = e.clientY - yOffset; 
+                el.style.zIndex = highestZ++; 
+                if(e.target===el || el.contains(e.target)) isDragging = true; 
+            }
+            
             function dragEnd() { 
                 if(isDragging) { 
-                    initialX = currentX; initialY = currentY; isDragging = false; 
-                    note.x = currentX; note.y = currentY; 
+                    isDragging = false; 
+                    note.x = xOffset; 
+                    note.y = yOffset; 
                     if(isDevMode) {
                         localStorage.setItem(`dev_notes_${currentUser}`, JSON.stringify(notes));
                     } else {
-                        firebase.firestore().collection('notes').doc(note.id).update({x: currentX, y: currentY}); 
+                        firebase.firestore().collection('notes').doc(note.id).update({x: note.x, y: note.y}).catch(err => console.error(err)); 
                     }
                 } 
             }
-            function drag(e) { if(isDragging) { e.preventDefault(); currentX = e.clientX - initialX; currentY = e.clientY - initialY; xOffset = currentX; yOffset = currentY; el.style.left = `${currentX}px`; el.style.top = `${currentY}px`; } }
+            function drag(e) { 
+                if(isDragging) { 
+                    e.preventDefault(); 
+                    currentX = e.clientX - initialX; 
+                    currentY = e.clientY - initialY; 
+                    xOffset = currentX; 
+                    yOffset = currentY; 
+                    el.style.left = `${currentX}px`; 
+                    el.style.top = `${currentY}px`; 
+                } 
+            }
         }
     </script>
 </body>

@@ -77,4 +77,4 @@ injected_html = f"""
 """
 
 # Render the application
-components.html(injected_html, height=1200, scrolling=False)
+components.html(injected_html, height=800, scrolling=False)
