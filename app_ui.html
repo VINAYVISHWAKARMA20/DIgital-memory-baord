@@ -92,13 +92,19 @@
                 <h2 class="text-3xl font-bold mb-2">Welcome! 👋</h2>
                 <p class="text-gray-500 mb-8">Enter your name to access your personal fridge board.</p>
                 
-                <div class="space-y-4">
+                <div class="space-y-4" id="login-step-1">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Your Username</label>
-                        <input type="text" id="login-username" onkeypress="if(event.key === 'Enter') login()" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none text-lg transition" placeholder="e.g. Alan Walker">
+                        <input type="text" id="login-username" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none text-lg transition" placeholder="e.g. Alan Walker">
                     </div>
-                    
-                    <button onclick="login()" class="w-full bg-orange-500 text-white font-bold py-3.5 rounded-xl hover:bg-orange-600 transition shadow-[0_4px_10px_rgba(255,107,0,0.2)] text-lg">Go to your Memory</button>
+                    <button onclick="checkUser()" id="btn-check-user" class="w-full bg-orange-500 text-white font-bold py-3.5 rounded-xl hover:bg-orange-600 transition shadow-[0_4px_10px_rgba(255,107,0,0.2)] text-lg">Continue</button>
+                </div>
+
+                <div class="space-y-4 hidden" id="login-step-2">
+                    <button onclick="resetLogin()" class="text-xs text-orange-600 font-bold hover:underline mb-2 flex items-center gap-1">← Change Username</button>
+                    <div id="pin-instruction" class="text-sm text-gray-600 font-medium mb-2"></div>
+                    <input type="password" id="login-pin" maxlength="4" inputmode="numeric" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none text-3xl tracking-[1em] text-center transition" placeholder="••••">
+                    <button onclick="login()" id="btn-login" class="w-full bg-orange-500 text-white font-bold py-3.5 rounded-xl hover:bg-orange-600 transition shadow-[0_4px_10px_rgba(255,107,0,0.2)] text-lg">Enter Memory Board</button>
                 </div>
             </div>
         </div>
@@ -264,32 +270,91 @@
         // Auto-login check
         document.addEventListener('DOMContentLoaded', () => {
             const savedUser = localStorage.getItem('aaj_kya_kiya_user');
-            if(savedUser) {
-                document.getElementById('login-username').value = savedUser;
-                login(true); // silent login
+            const savedPin = localStorage.getItem('aaj_kya_kiya_pin');
+            if(savedUser && savedPin) {
+                currentUser = savedUser;
+                login(true, savedPin); // silent login
             }
         });
 
-        function login(isSilent = false) {
+        async function checkUser() {
             const usernameInput = document.getElementById('login-username').value.trim();
-            if(!usernameInput) return alert("Please enter a username to continue.");
+            if(!usernameInput) return alert("Please enter a username.");
             
-            currentUser = usernameInput; // Removed .toLowerCase() to maintain original case
+            const btn = document.getElementById('btn-check-user');
+            btn.innerHTML = '<span class="loader"></span>';
+            
+            try {
+                const userDoc = await firebase.firestore().collection('users').doc(usernameInput).get();
+                document.getElementById('login-step-1').classList.add('hidden');
+                document.getElementById('login-step-2').classList.remove('hidden');
+                currentUser = usernameInput;
+                
+                if (userDoc.exists) {
+                    document.getElementById('pin-instruction').innerText = "Welcome back! Enter your 4-digit PIN:";
+                } else {
+                    document.getElementById('pin-instruction').innerText = "New User! Set a 4-digit PIN for your board:";
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Connection error. Please try again.");
+            } finally {
+                btn.innerText = "Continue";
+            }
+        }
+
+        function resetLogin() {
+            document.getElementById('login-step-1').classList.remove('hidden');
+            document.getElementById('login-step-2').classList.add('hidden');
+            document.getElementById('login-pin').value = '';
+        }
+
+        async function login(isSilent = false, autoPin = null) {
+            const pinInput = autoPin || document.getElementById('login-pin').value.trim();
+            if(!pinInput || pinInput.length < 4) return alert("Please enter a 4-digit PIN.");
+            
+            const btn = document.getElementById('btn-login');
+            if(!isSilent) btn.innerHTML = '<span class="loader"></span>';
+            
+            try {
+                const userRef = firebase.firestore().collection('users').doc(currentUser);
+                const userDoc = await userRef.get();
+                
+                if (userDoc.exists) {
+                    // Check PIN
+                    if (userDoc.data().pin === pinInput) {
+                        proceedToMain(pinInput);
+                    } else {
+                        if(isSilent) logout(); // If saved pin is wrong, clear session
+                        else alert("Incorrect PIN. Please try again.");
+                    }
+                } else {
+                    // Create new user
+                    await userRef.set({ pin: pinInput });
+                    proceedToMain(pinInput);
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Login failed. Check your connection.");
+            } finally {
+                if(!isSilent) btn.innerText = "Enter Memory Board";
+            }
+        }
+
+        function proceedToMain(pin) {
             localStorage.setItem('aaj_kya_kiya_user', currentUser);
+            localStorage.setItem('aaj_kya_kiya_pin', pin);
             
-            // Update UI
             document.getElementById('user-name').innerText = currentUser;
             document.getElementById('user-initials').innerText = currentUser.substring(0,2).toUpperCase();
-            
-            // Route
             document.getElementById('login-view').classList.add('hidden');
             document.getElementById('main-view').classList.remove('hidden');
-            
             fetchNotes();
         }
 
         function logout() {
             localStorage.removeItem('aaj_kya_kiya_user');
+            localStorage.removeItem('aaj_kya_kiya_pin');
             window.location.reload();
         }
 
