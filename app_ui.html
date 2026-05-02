@@ -174,6 +174,11 @@
             <input type="text" id="n-title" placeholder="Title (Optional)" class="w-full mb-2 px-3 py-2 border border-gray-200 rounded-lg focus:border-orange-500 outline-none">
             <textarea id="n-text" placeholder="Write your thoughts... Use '- [ ]' for checklist items." class="w-full h-28 mb-4 px-3 py-2 border border-gray-200 rounded-lg focus:border-orange-500 outline-none resize-none"></textarea>
             
+            <div class="flex items-center gap-2 mb-6 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <input type="checkbox" id="n-is-task" class="w-4 h-4 text-orange-500 rounded border-gray-300 focus:ring-orange-500 cursor-pointer">
+                <label for="n-is-task" class="text-xs font-bold text-gray-600 uppercase tracking-tight cursor-pointer">Enable Task Checkbox</label>
+            </div>
+            
             <div class="flex gap-2 mb-6" id="color-picker-group">
                 <button onclick="selectColor('yellow')" class="w-8 h-8 rounded-full bg-[#ffeb99] border-2 border-transparent ring-2 ring-offset-2 ring-gray-800" id="cc-yellow"></button>
                 <button onclick="selectColor('pink')" class="w-8 h-8 rounded-full bg-[#ffc2d4] border-2 border-transparent" id="cc-pink"></button>
@@ -329,6 +334,8 @@
                     id: generateId(),
                     title: document.getElementById('n-title').value.trim(),
                     text: document.getElementById('n-text').value.trim(),
+                    isTask: document.getElementById('n-is-task').checked,
+                    checked: false,
                     date: new Date().toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'}),
                     color: activeColor,
                     x: 50 + Math.random() * 100,
@@ -354,6 +361,7 @@
                 
                 document.getElementById('n-title').value = '';
                 document.getElementById('n-text').value = '';
+                document.getElementById('n-is-task').checked = false;
                 fileInput.value = '';
                 
                 closeModal();
@@ -457,6 +465,23 @@
             }
         }
 
+        async function toggleMainCheck(noteId) {
+            const note = notes.find(n => n.id === noteId);
+            if (!note) return;
+            note.checked = !note.checked;
+            renderBoard();
+            
+            if (isDevMode) {
+                localStorage.setItem(`dev_notes_${currentUser}`, JSON.stringify(notes));
+            } else {
+                try {
+                    await firebase.firestore().collection('notes').doc(noteId).update({ checked: note.checked });
+                } catch (e) {
+                    console.error("Failed to update task status", e);
+                }
+            }
+        }
+
         function renderBoard() {
             const container = document.getElementById('notes-container');
             container.innerHTML = '';
@@ -473,6 +498,15 @@
                 el.style.left = `${note.x}px`; el.style.top = `${note.y}px`; el.style.setProperty('--rot', `${note.rot || 0}deg`); el.style.zIndex = highestZ++;
 
                 let html = `<div class="pin ${pinClass}"></div><div class="note-actions"><button onclick="deleteNote('${note.id}')">🗑️</button></div>`;
+                
+                if (note.isTask) {
+                    html += `<div class="mb-3 flex items-center gap-2 p-1.5 bg-black/5 rounded-lg cursor-pointer hover:bg-black/10 transition" onclick="toggleMainCheck('${note.id}')">
+                        <div class="w-5 h-5 border-2 border-gray-800 rounded flex items-center justify-center ${note.checked ? 'bg-gray-800' : ''}">
+                            ${note.checked ? '<span class="text-white text-xs">✓</span>' : ''}
+                        </div>
+                        <span class="text-xs font-bold uppercase tracking-tighter ${note.checked ? 'line-through opacity-50' : ''}">${note.checked ? 'Completed' : 'To-Do'}</span>
+                    </div>`;
+                }
                 
                 html += `<div class="flex-grow flex flex-col ${note.type === 'mixed' ? 'font-sans' : 'font-hand text-[19px] text-gray-800'}">`;
                 
