@@ -173,13 +173,15 @@
                 <div><h1 class="text-2xl font-black text-gray-800 tracking-tighter">Aaj Kya Kiya</h1><div class="text-[10px] font-black uppercase text-gray-400 tracking-widest">Digital Memory Board</div></div>
             </div>
             
-            <div class="flex items-center gap-4 p-4 rounded-3xl mb-8 bg-gray-50/50 border border-gray-100 shadow-sm">
-                <div id="user-initials" class="w-12 h-12 rounded-2xl bg-orange-500 text-white flex items-center justify-center font-black shadow-inner">--</div>
-                <div class="flex-1">
-                    <div id="user-name" class="font-bold text-gray-800">User Name</div>
-                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Fridge Owner</div>
+            <div class="flex items-center gap-4 p-5 rounded-[28px] mb-8 bg-white border border-gray-100 shadow-sm">
+                <div id="user-initials" class="w-12 h-12 rounded-full bg-orange-500 text-white flex items-center justify-center font-black shadow-inner text-lg">--</div>
+                <div class="flex-1 overflow-hidden">
+                    <div id="user-name" class="font-extrabold text-gray-900 text-lg truncate leading-tight">User Name</div>
+                    <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Online Now</div>
                 </div>
-                <button onclick="logout()" class="p-2 hover:bg-white hover:shadow-sm rounded-xl transition-all" title="Logout">🚪</button>
+                <button onclick="logout()" class="p-2 hover:bg-orange-50 rounded-xl transition-all group" title="Logout">
+                    <span class="opacity-40 group-hover:opacity-100 transition-opacity">🚪</span>
+                </button>
             </div>
             
             <div class="flex flex-col gap-3 mb-8">
