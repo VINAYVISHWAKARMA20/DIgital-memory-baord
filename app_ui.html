@@ -13,6 +13,7 @@
     
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     
@@ -88,49 +89,17 @@
         
         <!-- Right Login Form -->
         <div class="w-1/2 bg-white flex flex-col justify-center items-center px-12 relative">
-            <div class="w-full max-w-sm">
-                <h2 class="text-3xl font-bold mb-2">Welcome! 👋</h2>
-                <p class="text-gray-500 mb-8">Enter your name to access your personal fridge board.</p>
+            <div class="w-full max-w-sm text-center">
+                <h2 class="text-4xl font-bold mb-3 text-gray-900">Welcome Back</h2>
+                <p class="text-gray-500 mb-10 text-lg">Sign in to access your personal memory board and cherish your journey.</p>
                 
-                <div class="space-y-4" id="login-step-1">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Your Username</label>
-                        <input type="text" id="login-username" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none text-lg transition" placeholder="e.g. Alan Walker">
-                    </div>
-                    <button onclick="checkUser()" id="btn-check-user" class="w-full bg-orange-500 text-white font-bold py-3.5 rounded-xl hover:bg-orange-600 transition shadow-[0_4px_10px_rgba(255,107,0,0.2)] text-lg">Continue</button>
-                </div>
+                <button onclick="loginWithGoogle()" id="btn-google-login" class="w-full flex items-center justify-center gap-4 bg-white border-2 border-gray-100 hover:border-orange-500 hover:bg-orange-50/30 py-4 px-6 rounded-2xl font-bold text-gray-700 transition-all shadow-sm hover:shadow-md group">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" class="w-6 h-6" alt="Google">
+                    <span class="text-lg">Sign in with Google</span>
+                </button>
 
-                <div class="space-y-4 hidden" id="login-step-2">
-                    <button onclick="resetLogin()" class="text-xs text-orange-600 font-bold hover:underline mb-2 flex items-center gap-1">← Change Username</button>
-                    <div id="pin-status-tag" class="inline-block px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider mb-2"></div>
-                    <div id="pin-instruction" class="text-sm text-gray-600 font-medium mb-2"></div>
-                    
-                    <input type="password" id="login-pin" maxlength="4" inputmode="numeric" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none text-3xl tracking-[1.2em] text-center transition" placeholder="••••">
-                    
-                    <!-- New User Extra Fields -->
-                    <div id="registration-fields" class="hidden space-y-3 pt-2">
-                        <label class="block text-[11px] font-bold text-gray-400 uppercase">Recovery Security Question</label>
-                        <select id="reg-question" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-orange-500">
-                            <option value="What was your first pet's name?">What was your first pet's name?</option>
-                            <option value="What is your mother's maiden name?">What is your mother's maiden name?</option>
-                            <option value="What city were you born in?">What city were you born in?</option>
-                            <option value="What was the name of your first school?">What was the name of your first school?</option>
-                        </select>
-                        <input type="text" id="reg-answer" placeholder="Your Answer" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-orange-500">
-                    </div>
-
-                    <button onclick="login()" id="btn-login" class="w-full bg-orange-500 text-white font-bold py-3.5 rounded-xl hover:bg-orange-600 transition shadow-[0_4px_10px_rgba(255,107,0,0.2)] text-lg">Enter Memory Board</button>
-                    
-                    <button id="btn-forgot-pin" onclick="showRecovery()" class="w-full text-xs text-gray-400 font-medium hover:text-orange-600 transition hidden">Forgot PIN? Recover access</button>
-                </div>
-
-                <!-- Recovery View -->
-                <div class="space-y-4 hidden" id="login-recovery">
-                    <button onclick="resetLogin()" class="text-xs text-orange-600 font-bold hover:underline mb-2 flex items-center gap-1">← Back to Login</button>
-                    <h3 class="font-bold text-gray-800">Account Recovery</h3>
-                    <div id="recovery-question" class="p-3 bg-orange-50 text-orange-800 rounded-lg text-sm font-medium border border-orange-100"></div>
-                    <input type="text" id="recovery-answer" placeholder="Your Answer" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition">
-                    <button onclick="recoverAccount()" id="btn-recover" class="w-full bg-orange-500 text-white font-bold py-3.5 rounded-xl hover:bg-orange-600 transition">Reset PIN</button>
+                <div class="mt-8 pt-8 border-t border-gray-50">
+                    <p class="text-xs text-gray-400 uppercase tracking-widest font-bold">Secure Cloud Sync</p>
                 </div>
             </div>
         </div>
@@ -293,154 +262,76 @@
             document.getElementById('auth-alert').classList.remove('hidden');
         }
 
-        // Auto-login check
-        document.addEventListener('DOMContentLoaded', () => {
-            const savedUser = localStorage.getItem('aaj_kya_kiya_user');
-            const savedPin = localStorage.getItem('aaj_kya_kiya_pin');
-            if(savedUser && savedPin) {
-                currentUser = savedUser;
-                login(true, savedPin); // silent login
+        let currentUser = null;
+        let currentUid = null;
+        let notes = [];
+        let highestZ = 10;
+        let activeColor = 'yellow';
+        const pinColors = ['pin-red', 'pin-blue', 'pin-green', 'pin-purple', 'pin-yellow'];
+
+        // Auth Observer
+        firebase.auth().onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user.displayName;
+                currentUid = user.uid;
+                document.getElementById('user-name').innerText = currentUser;
+                document.getElementById('user-initials').innerText = currentUser.substring(0,2).toUpperCase();
+                document.getElementById('login-view').classList.add('hidden');
+                document.getElementById('main-view').classList.remove('hidden');
+                fetchNotes();
+            } else {
+                document.getElementById('login-view').classList.remove('hidden');
+                document.getElementById('main-view').classList.add('hidden');
             }
         });
 
-        async function checkUser() {
-            const usernameInput = document.getElementById('login-username').value.trim();
-            if(!usernameInput) return alert("Please enter a username.");
-            
-            const btn = document.getElementById('btn-check-user');
-            btn.innerHTML = '<span class="loader"></span>';
-            
+        async function loginWithGoogle() {
+            const btn = document.getElementById('btn-google-login');
+            btn.innerHTML = '<span class="loader"></span> Authenticating...';
+            const provider = new firebase.auth.GoogleAuthProvider();
             try {
-                const userDoc = await firebase.firestore().collection('users').doc(usernameInput).get();
-                document.getElementById('login-step-1').classList.add('hidden');
-                document.getElementById('login-step-2').classList.remove('hidden');
-                document.getElementById('login-recovery').classList.add('hidden');
-                currentUser = usernameInput;
-                
-                const tag = document.getElementById('pin-status-tag');
-                const forgotBtn = document.getElementById('btn-forgot-pin');
-                const regFields = document.getElementById('registration-fields');
-
-                if (userDoc.exists) {
-                    tag.innerText = "Username Taken";
-                    tag.className = "inline-block px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider mb-2 bg-red-100 text-red-600";
-                    document.getElementById('pin-instruction').innerText = "Welcome back! Enter your PIN:";
-                    forgotBtn.classList.remove('hidden');
-                    regFields.classList.add('hidden');
-                } else {
-                    tag.innerText = "Username Available";
-                    tag.className = "inline-block px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider mb-2 bg-green-100 text-green-600";
-                    document.getElementById('pin-instruction').innerText = "Set a 4-digit PIN for your board:";
-                    forgotBtn.classList.add('hidden');
-                    regFields.classList.remove('hidden');
-                }
+                await firebase.auth().signInWithPopup(provider);
             } catch (e) {
                 console.error(e);
-                alert("Connection error. Please try again.");
-            } finally {
-                btn.innerText = "Continue";
-            }
-        }
-
-        function resetLogin() {
-            document.getElementById('login-step-1').classList.remove('hidden');
-            document.getElementById('login-step-2').classList.add('hidden');
-            document.getElementById('login-recovery').classList.add('hidden');
-            document.getElementById('login-pin').value = '';
-        }
-
-        async function showRecovery() {
-            const userDoc = await firebase.firestore().collection('users').doc(currentUser).get();
-            if(userDoc.exists && userDoc.data().question) {
-                document.getElementById('login-step-2').classList.add('hidden');
-                document.getElementById('login-recovery').classList.remove('hidden');
-                document.getElementById('recovery-question').innerText = userDoc.data().question;
-            } else {
-                alert("This account doesn't have recovery setup. Please contact the administrator.");
-            }
-        }
-
-        async function recoverAccount() {
-            const answer = document.getElementById('recovery-answer').value.trim();
-            if(!answer) return alert("Please enter your recovery answer.");
-            
-            const btn = document.getElementById('btn-recover');
-            btn.innerHTML = '<span class="loader"></span>';
-            
-            try {
-                const userDoc = await firebase.firestore().collection('users').doc(currentUser).get();
-                if(userDoc.data().answer === answer) {
-                    const newPin = prompt("Correct! Set a new 4-digit PIN:");
-                    if(newPin && newPin.length === 4) {
-                        await firebase.firestore().collection('users').doc(currentUser).update({ pin: newPin });
-                        alert("PIN Reset Successful! Please login with your new PIN.");
-                        resetLogin();
-                    }
+                if (e.code === 'auth/popup-blocked') {
+                    alert("Popup blocked! Please allow popups for this site or try again.");
                 } else {
-                    alert("Incorrect answer. Recovery failed.");
+                    alert("Google Login failed: " + e.message);
                 }
-            } catch (e) {
-                console.error(e);
             } finally {
-                btn.innerText = "Reset PIN";
+                btn.innerHTML = '<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" class="w-6 h-6"><span class="text-lg">Sign in with Google</span>';
             }
         }
 
-        async function login(isSilent = false, autoPin = null) {
-            const pinInput = autoPin || document.getElementById('login-pin').value.trim();
-            if(!pinInput || pinInput.length < 4) return alert("Please enter a 4-digit PIN.");
-            
-            const btn = document.getElementById('btn-login');
-            if(!isSilent) btn.innerHTML = '<span class="loader"></span>';
+        async function fetchNotes() {
+            const board = document.getElementById('notes-container');
+            board.innerHTML = '<div class="flex items-center justify-center h-full text-gray-400 gap-3"><span class="loader"></span> Fetching your memories...</div>';
             
             try {
-                const userRef = firebase.firestore().collection('users').doc(currentUser);
-                const userDoc = await userRef.get();
-                
-                if (userDoc.exists) {
-                    // Check PIN
-                    if (userDoc.data().pin === pinInput) {
-                        proceedToMain(pinInput);
-                    } else {
-                        if(isSilent) logout(); 
-                        else alert("Incorrect PIN. Please try again.");
-                    }
+                notes = [];
+                if (isDevMode) {
+                    notes = JSON.parse(localStorage.getItem(`dev_notes_${currentUid}`)) || [];
                 } else {
-                    // New user - capture security question too
-                    const question = document.getElementById('reg-question').value;
-                    const answer = document.getElementById('reg-answer').value.trim();
-                    if(!answer) return alert("Please set a security answer for recovery.");
+                    // Fetch by UID for security
+                    const snapshot = await firebase.firestore().collection('notes')
+                        .where('uid', '==', currentUid)
+                        .get();
                     
-                    await userRef.set({ 
-                        pin: pinInput,
-                        question: question,
-                        answer: answer
+                    snapshot.forEach(doc => {
+                        notes.push({ id: doc.id, ...doc.data() });
                     });
-                    proceedToMain(pinInput);
                 }
+                renderBoard();
             } catch (e) {
-                console.error(e);
-                alert("Login failed. Check your connection.");
-            } finally {
-                if(!isSilent) btn.innerText = "Enter Memory Board";
+                console.error("Fetch failed", e);
+                board.innerHTML = '<div class="text-center p-10 text-red-400">Failed to load notes. Please check your connection.</div>';
             }
-        }
-
-        function proceedToMain(pin) {
-            localStorage.setItem('aaj_kya_kiya_user', currentUser);
-            localStorage.setItem('aaj_kya_kiya_pin', pin);
-            
-            document.getElementById('user-name').innerText = currentUser;
-            document.getElementById('user-initials').innerText = currentUser.substring(0,2).toUpperCase();
-            document.getElementById('login-view').classList.add('hidden');
-            document.getElementById('main-view').classList.remove('hidden');
-            fetchNotes();
         }
 
         function logout() {
-            localStorage.removeItem('aaj_kya_kiya_user');
-            localStorage.removeItem('aaj_kya_kiya_pin');
-            window.location.reload();
+            firebase.auth().signOut().then(() => {
+                window.location.reload();
+            });
         }
 
         async function fetchNotes() {
@@ -526,7 +417,8 @@
                     x: (window.innerWidth / 2) - 100 + (Math.random() * 60 - 30),
                     y: (window.innerHeight / 2) - 150 + (Math.random() * 60 - 30),
                     rot: Math.random() * 6 - 3,
-                    username: currentUser
+                    username: currentUser,
+                    uid: currentUid
                 };
 
                 if(!note.text && fileInput.files.length === 0 && !note.title) return alert("Note cannot be empty.");
