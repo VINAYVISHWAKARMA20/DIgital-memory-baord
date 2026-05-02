@@ -404,17 +404,57 @@
             }
         }
 
-        function formatChecklist(text) {
+        function formatChecklist(text, noteId) {
             if(!text) return "";
             const lines = text.split('\n');
             let formatted = '';
-            lines.forEach(line => {
-                if (line.trim().startsWith('- [ ]')) formatted += `<div class="check-item"><div class="check-box"></div> <span>${line.replace('- [ ]', '').trim()}</span></div>`;
-                else if (line.trim().startsWith('- [x]')) formatted += `<div class="check-item"><div class="check-box checked"></div> <span>${line.replace('- [x]', '').trim()}</span></div>`;
-                else if (line.trim().startsWith('• ')) formatted += `<div class="mb-1">• ${line.replace('• ', '').trim()}</div>`;
-                else formatted += `<div>${line}</div>`;
+            lines.forEach((line, index) => {
+                const trimmed = line.trim();
+                if (trimmed.startsWith('- [ ]')) {
+                    formatted += `<div class="check-item group cursor-pointer" onclick="toggleCheck('${noteId}', ${index})">
+                        <div class="check-box group-hover:border-orange-500"></div> 
+                        <span class="group-hover:text-orange-600">${trimmed.replace('- [ ]', '').trim()}</span>
+                    </div>`;
+                } else if (trimmed.startsWith('- [x]')) {
+                    formatted += `<div class="check-item group cursor-pointer" onclick="toggleCheck('${noteId}', ${index})">
+                        <div class="check-box checked group-hover:bg-orange-600"></div> 
+                        <span class="line-through text-gray-500 group-hover:text-orange-600">${trimmed.replace('- [x]', '').trim()}</span>
+                    </div>`;
+                } else if (trimmed.startsWith('• ')) {
+                    formatted += `<div class="mb-1">• ${trimmed.replace('• ', '').trim()}</div>`;
+                } else {
+                    formatted += `<div>${line}</div>`;
+                }
             });
             return formatted;
+        }
+
+        async function toggleCheck(noteId, lineIndex) {
+            const note = notes.find(n => n.id === noteId);
+            if (!note) return;
+            
+            const lines = note.text.split('\n');
+            let line = lines[lineIndex];
+            
+            if (line.trim().startsWith('- [ ]')) {
+                lines[lineIndex] = line.replace('- [ ]', '- [x]');
+            } else if (line.trim().startsWith('- [x]')) {
+                lines[lineIndex] = line.replace('- [x]', '- [ ]');
+            }
+            
+            note.text = lines.join('\n');
+            renderBoard();
+            
+            // Persist the checkbox state
+            if (isDevMode) {
+                localStorage.setItem(`dev_notes_${currentUser}`, JSON.stringify(notes));
+            } else {
+                try {
+                    await firebase.firestore().collection('notes').doc(noteId).update({ text: note.text });
+                } catch (e) {
+                    console.error("Failed to update checkbox", e);
+                }
+            }
         }
 
         function renderBoard() {
@@ -439,10 +479,10 @@
                 if (note.image_url) {
                     html += `<img src="${note.image_url}" class="note-image" draggable="false"/>`;
                     if(note.title) html += `<strong class="text-[16px] font-bold mt-1 leading-tight">${note.title}</strong>`;
-                    if(note.text) html += `<div class="text-sm mt-1 leading-snug">${formatChecklist(note.text)}</div>`;
+                    if(note.text) html += `<div class="text-sm mt-1 leading-snug">${formatChecklist(note.text, note.id)}</div>`;
                 } else {
                     if(note.title) html += `<div class="font-bold text-[22px] mb-2 border-b border-black/5 pb-1">${note.title}</div>`;
-                    if (note.text) html += `<div class="leading-snug">${formatChecklist(note.text)}</div>`;
+                    if (note.text) html += `<div class="leading-snug">${formatChecklist(note.text, note.id)}</div>`;
                 }
                 html += `</div><div class="text-[12px] text-black/50 font-sans mt-auto pt-3">${note.date}</div>`;
                 
