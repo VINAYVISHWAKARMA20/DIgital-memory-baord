@@ -1,4 +1,4 @@
-# 📓 Aaj Kya Kiya - Digital Memory Board
+# 📓 Aaj Kya Kiya - Digital Memory Board with sticky notes
 
 A stunning, highly responsive Digital Memory Board built with **Streamlit**, **Tailwind CSS**, and **Firebase**. Capture your daily progress, stick memories, and organize your thoughts on a beautiful interactive board that feels like a physical fridge, but with cloud-powered persistence.
 
