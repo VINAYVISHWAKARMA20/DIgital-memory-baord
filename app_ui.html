@@ -38,7 +38,7 @@
         ::-webkit-scrollbar { width: 0px; background: transparent; }
 
         .sticky-note { position: absolute; width: 230px; min-height: 230px; padding: 24px 20px 20px 20px; box-shadow: 2px 8px 15px rgba(0,0,0,0.08), 0 2px 5px rgba(0,0,0,0.05); cursor: grab; display: flex; flex-direction: column; transition: transform 0.2s ease, box-shadow 0.2s ease; user-select: none; transform: rotate(var(--rot)); border-radius: 2px; border-bottom-right-radius: 15px 5px; }
-        .sticky-note:active { cursor: grabbing; z-index: 1000 !important; transform: scale(1.05) rotate(var(--rot)); box-shadow: 0 15px 35px rgba(0,0,0,0.15);}
+                .sticky-note:active { cursor: grabbing; z-index: 4000 !important; transform: scale(1.05) rotate(var(--rot)); box-shadow: 0 15px 35px rgba(0,0,0,0.15);}
         .sticky-note.type-mixed { padding: 12px 12px 40px 12px; border-radius: 4px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
 
         .pin { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 14px; height: 14px; border-radius: 50%; box-shadow: inset -2px -2px 4px rgba(0,0,0,0.3), 2px 2px 4px rgba(0,0,0,0.2); z-index: 10; }
@@ -60,7 +60,7 @@
         .check-box.checked { background: #2c2c2c; position: relative; }
         .check-box.checked::after { content: '✓'; position: absolute; color: white; font-size: 10px; top: -1px; left: 2px; }
 
-        .modal-overlay { background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); z-index: 100; }
+                .modal-overlay { background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); z-index: 9999; }
         .color-yellow { background: #ffeb99; }
         .color-pink { background: #ffc2d4; }
         .color-cyan { background: #c2e2ff; }
@@ -167,7 +167,7 @@
     <!-- MAIN APP VIEW (Sidebar Image 2 Style) -->
     <div id="main-view" class="hidden flex h-screen w-screen bg-[#fdfcf0]">
         <!-- Sidebar -->
-        <div class="w-[360px] flex flex-col p-8 z-20 bg-white border-r border-gray-100">
+        <div class="w-[360px] flex flex-col p-8 z-[5000] bg-white border-r border-gray-100">
             <div class="flex items-center gap-4 mb-10">
                 <img src="https://cdn-icons-png.flaticon.com/512/2358/2358178.png" class="w-12 h-12 object-contain" alt="Logo">
                 <div><h1 class="text-2xl font-black text-gray-800 tracking-tighter leading-none">Aaj Kya Kiya</h1><div class="text-[9px] font-bold uppercase text-orange-500 tracking-widest mt-1">Your digital memory board</div></div>
@@ -537,7 +537,7 @@
 
         function showNotify(msg) {
             const n = document.createElement('div');
-            n.className = "fixed bottom-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-8 py-4 rounded-full text-sm font-bold shadow-2xl z-[100] animate-bounce";
+            n.className = "fixed bottom-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-8 py-4 rounded-full text-sm font-bold shadow-2xl z-[10000] animate-bounce";
             n.innerText = msg;
             document.body.appendChild(n);
             setTimeout(() => n.remove(), 4000);
